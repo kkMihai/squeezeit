@@ -78,7 +78,7 @@ jobs:
           generate_release_notes: true
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: squeezeit-${{ matrix.target }}
           path: ${{ env.ASSET }}
