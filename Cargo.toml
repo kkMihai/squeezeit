@@ -20,9 +20,9 @@ flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
 rayon = "1.10"
 walkdir = "2.5"
 tracing = "0.1"
-wgpu = "29"
+wgpu = "30"
 block_compression = { version = "0.9", features = ["wgpu"] }
-zune-png = "0.4"
+zune-png = "0.5"
 
 anyhow = "1.0"
 tracing-subscriber = "0.3"
@@ -34,7 +34,7 @@ rfd = "0.17"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 
-criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
+criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
 
 [profile.release]
 lto = "thin"

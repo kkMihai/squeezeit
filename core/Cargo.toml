@@ -19,14 +19,14 @@ serde.workspace = true
 wgpu.workspace = true
 block_compression.workspace = true
 zune-png.workspace = true
-rustc-hash = "1.1"
+rustc-hash = "2.1"
 rpf-archive = "0.7.1"
 fast_image_resize = "6"
-sha1 = "0.10"
+sha1 = "0.11"
 anyhow.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.60", features = [
+windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_System_Threading",
     "Wdk_Graphics_Direct3D",
