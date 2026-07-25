@@ -73,9 +73,16 @@ pub(super) fn top_stride(width: u32, layout: PixelLayout) -> u16 {
     }
 }
 
+/// Returns the number of mip levels RAGE will actually sample for a texture
+/// of the given dimensions.
+///
+/// RAGE never samples the 2×2 and 1×1 tail mips, so we cap one level below
+/// the theoretical full chain. We base this on `max_side` so that non-square
+/// textures (e.g. 512×32) are not penalised by the smaller dimension — the
+/// 512-wide axis needs its full chain available.
 pub(super) fn rage_mip_levels(w: u32, h: u32) -> u32 {
-    let min_side = w.min(h).max(1);
-    (min_side.ilog2()).saturating_sub(1).max(1)
+    let max_side = w.max(h).max(1);
+    (max_side.ilog2()).saturating_sub(1).max(1)
 }
 
 pub(super) fn fourcc_of(f: ImageFormat) -> u32 {
@@ -116,11 +123,19 @@ mod tests {
 
     #[test]
     fn rage_mip_convention() {
+        // Square textures: same as before
         assert_eq!(rage_mip_levels(512, 512), 8);
         assert_eq!(rage_mip_levels(256, 256), 7);
-        assert_eq!(rage_mip_levels(256, 128), 6);
-        assert_eq!(rage_mip_levels(512, 32), 4);
         assert_eq!(rage_mip_levels(8, 8), 2);
         assert_eq!(rage_mip_levels(4, 4), 1);
+
+        // Non-square: must use max_side, not min_side
+        // 256x128 — max=256, ilog2(256)=8, -1 = 7
+        assert_eq!(rage_mip_levels(256, 128), 7);
+        // 512x32 — max=512, ilog2(512)=9, -1 = 8
+        // (old min_side code gave 4, stripping valid 512-side mips)
+        assert_eq!(rage_mip_levels(512, 32), 8);
+        // 1024x64 — max=1024, ilog2(1024)=10, -1 = 9
+        assert_eq!(rage_mip_levels(1024, 64), 9);
     }
 }
