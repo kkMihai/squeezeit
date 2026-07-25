@@ -49,7 +49,6 @@ enum TexKind {
 
 enum RecOutcome<'a> {
     Tex(SqueezedTex<'a>, TexKind),
-    Skip(String),
 }
 
 const DICT_INSPECT_BYTES: usize = 16 * 1024 * 1024;
@@ -171,11 +170,38 @@ pub(crate) fn squeeze_ytd(
         |_, rec| -> Result<RecOutcome<'_>> {
             let role = classify_name(Path::new(&rec.name));
 
+            let verbatim = |kind| {
+                // Calculate source bytes even when pixel_layout is unknown so we
+                // can pass the raw data through verbatim. If we can't determine
+                // the length from the format, fall back to reading until end-of-gfx.
+                let source = if let Some(layout) = pixel_layout(rec.format) {
+                    let source_len = chain_len(rec.width, rec.height, rec.levels, layout);
+                    gfx.get(rec.data..rec.data + source_len)
+                        .unwrap_or(&gfx[rec.data..])
+                } else {
+                    &gfx[rec.data..]
+                };
+                RecOutcome::Tex(
+                    SqueezedTex {
+                        data: Cow::Borrowed(source),
+                        patch: None,
+                    },
+                    kind,
+                )
+            };
+
+            // Unknown/unsupported pixel format: keep the texture verbatim and
+            // continue processing the rest of the dictionary. Previously this
+            // bailed the entire .ytd with Skipped, unlike squeeze_drawable which
+            // just kept the individual texture.
             let Some(layout) = pixel_layout(rec.format) else {
-                return Ok(RecOutcome::Skip(format!(
-                    "texture `{}` uses unsupported format {:#x} — container left untouched",
-                    rec.name, rec.format
-                )));
+                tracing::debug!(
+                    path = %job.path.display(),
+                    name = %rec.name,
+                    format = rec.format,
+                    "unsupported pixel format — keeping texture verbatim"
+                );
+                return Ok(verbatim(TexKind::Kept));
             };
 
             let source_len = chain_len(rec.width, rec.height, rec.levels, layout);
@@ -183,7 +209,7 @@ pub(crate) fn squeeze_ytd(
                 rsc7(format!("texture `{}` mip chain overruns segment", rec.name))
             })?;
 
-            let verbatim = |kind| {
+            let verbatim_from_source = |kind| {
                 RecOutcome::Tex(
                     SqueezedTex {
                         data: Cow::Borrowed(source),
@@ -194,10 +220,10 @@ pub(crate) fn squeeze_ytd(
             };
 
             if role == Some(TextureRole::ScriptRenderTarget) {
-                return Ok(verbatim(TexKind::Locked));
+                return Ok(verbatim_from_source(TexKind::Locked));
             }
             if !matches!(layout, PixelLayout::Block { .. }) {
-                return Ok(verbatim(TexKind::Kept));
+                return Ok(verbatim_from_source(TexKind::Kept));
             }
 
             let pair_cap = pair_cap_for(role, &rec.name, &pair_targets);
@@ -212,7 +238,7 @@ pub(crate) fn squeeze_ytd(
                         },
                         TexKind::Optimized,
                     ),
-                    None => verbatim(TexKind::Kept),
+                    None => verbatim_from_source(TexKind::Kept),
                 },
             )
         },
@@ -222,7 +248,6 @@ pub(crate) fn squeeze_ytd(
     let (mut optimized, mut locked, mut kept) = (0usize, 0usize, 0usize);
     for outcome in outcomes {
         match outcome {
-            RecOutcome::Skip(reason) => return Ok(SqueezeOutcome::Skipped { reason }),
             RecOutcome::Tex(tex, kind) => {
                 match kind {
                     TexKind::Optimized => optimized += 1,
