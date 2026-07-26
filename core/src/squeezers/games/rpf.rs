@@ -201,23 +201,29 @@ fn squeeze_archive(
         Ok((file.path.clone(), out))
     };
 
-    let outputs: Vec<(String, Vec<u8>)> = if may_parallel {
+    let builder = std::sync::Mutex::new(RpfBuilder::for_version(
+        archive.version,
+        RpfEncryption::None,
+    ));
+
+    if may_parallel {
         files
             .par_iter()
-            .map(process_file)
-            .collect::<std::result::Result<Vec<_>, String>>()?
+            .try_for_each(|file| -> std::result::Result<(), String> {
+                let (entry_path, data) = process_file(file)?;
+                builder.lock().unwrap().add_file(&entry_path, data);
+                Ok(())
+            })?;
     } else {
-        files
-            .iter()
-            .map(process_file)
-            .collect::<std::result::Result<Vec<_>, String>>()?
-    };
-
-    let mut builder = RpfBuilder::for_version(archive.version, RpfEncryption::None);
-    for (entry_path, data) in outputs {
-        builder.add_file(&entry_path, data);
+        for file in &files {
+            let (entry_path, data) = process_file(file)?;
+            builder.lock().unwrap().add_file(&entry_path, data);
+        }
     }
+
     builder
+        .into_inner()
+        .unwrap()
         .build(None)
         .map_err(|e| format!("archive rebuild failed: {e}"))
 }

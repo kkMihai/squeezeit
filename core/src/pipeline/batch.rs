@@ -12,6 +12,8 @@ use crate::report::SqueezeReport;
 use crate::settings::SqueezeSettings;
 use crate::squeezers::{SqueezeOutcome, SqueezerRegistry, TextureJob};
 
+const HUGE_FILE_THRESHOLD: u64 = 250 * 1024 * 1024;
+
 pub fn collect_targets(root: &Path, registry: &SqueezerRegistry) -> Vec<PathBuf> {
     if root.is_file() {
         return if registry.claims(root) {
@@ -71,9 +73,14 @@ pub fn run_targets(
         Some(BackupVault::new(vault_root, backup_dir)?)
     };
 
-    let pool_saturated = targets.len() >= rayon::current_num_threads();
+    let (huge_targets, normal_targets): (Vec<PathBuf>, Vec<PathBuf>) =
+        targets.iter().cloned().partition(|p| {
+            std::fs::metadata(p)
+                .map(|m| m.len() > HUGE_FILE_THRESHOLD)
+                .unwrap_or(false)
+        });
 
-    targets.par_iter().for_each(|path| {
+    let process_target = |path: &PathBuf, pool_saturated: bool| {
         if cancel.load(Ordering::Relaxed) {
             report.record_unchanged(0, false);
             debug!(path = %path.display(), reason = "cancelled", "skipped");
@@ -100,6 +107,15 @@ pub fn run_targets(
                 error!(path = %path.display(), error = %error, "failed");
             }
         }
+    };
+
+    for path in &huge_targets {
+        process_target(path, false);
+    }
+
+    let normal_pool_saturated = normal_targets.len() >= rayon::current_num_threads();
+    normal_targets.par_iter().for_each(|path| {
+        process_target(path, normal_pool_saturated);
     });
 
     let (compressed, busy, failures) = crate::gpu::counters();

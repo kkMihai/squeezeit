@@ -53,6 +53,37 @@ enum RecOutcome<'a> {
 
 const DICT_INSPECT_BYTES: usize = 16 * 1024 * 1024;
 
+fn verify_declaration(path: &Path, rec: &TexRecord, tex: &SqueezedTex<'_>) -> Result<()> {
+    let (width, height, levels, format) = match &tex.patch {
+        Some(p) => (p.width as u32, p.height as u32, p.levels as u32, p.format),
+        None => (rec.width, rec.height, rec.levels, rec.format),
+    };
+
+    let fail = |detail: String| SqueezeError::Rsc7 {
+        path: path.to_path_buf(),
+        detail,
+    };
+
+    let Some(layout) = pixel_layout(format) else {
+        return Err(fail(format!(
+            "texture `{}` would be written with unsupported format {format:#x}",
+            rec.name
+        )));
+    };
+
+    let needed = chain_len(width, height, levels, layout);
+    if tex.data.len() < needed {
+        return Err(fail(format!(
+            "texture `{}` declares {width}x{height} levels={levels} format={format:#x} \
+             ({needed} bytes) but only {} bytes were produced — refusing to emit a \
+             container that would read past its graphics segment",
+            rec.name,
+            tex.data.len(),
+        )));
+    }
+    Ok(())
+}
+
 fn warn_if_large_dict(path: &Path, records: &[TexRecord]) {
     let total: usize = records
         .iter()
@@ -278,6 +309,8 @@ pub(crate) fn squeeze_ytd(
     let mut dedup: FxHashMap<&[u8], u64> = FxHashMap::default();
     dedup.reserve(squeezed.len());
     for (rec, tex) in records.iter().zip(&squeezed) {
+        verify_declaration(job.path, rec, tex)?;
+
         let offset = match dedup.entry(tex.data.as_ref()) {
             Entry::Occupied(slot) => *slot.get(),
             Entry::Vacant(slot) => {
@@ -455,6 +488,27 @@ pub(crate) fn squeeze_drawable(
             DrawOutcome::Kept => kept += 1,
             DrawOutcome::Optimized(p) => {
                 let rec = &records[p.rec];
+
+                if let Some(layout) = pixel_layout(p.patch.format) {
+                    let needed = chain_len(
+                        p.patch.width as u32,
+                        p.patch.height as u32,
+                        p.patch.levels as u32,
+                        layout,
+                    );
+                    if p.data.len() < needed {
+                        return Err(rsc7(format!(
+                            "embedded texture `{}` declares {}x{} levels={} ({needed} bytes) \
+                             but only {} bytes were produced",
+                            rec.name,
+                            p.patch.width,
+                            p.patch.height,
+                            p.patch.levels,
+                            p.data.len(),
+                        )));
+                    }
+                }
+
                 let slot = &mut gfx[rec.data..rec.data + p.source_len];
                 slot[..p.data.len()].copy_from_slice(&p.data);
                 slot[p.data.len()..].fill(0);

@@ -5,7 +5,7 @@ members = ["core", "cli", "app"]
 [workspace.package]
 version = "1.0.0"
 edition = "2024"
-license = "MIT"
+license-file = "LICENSE"
 authors = ["kkmihai"]
 repository = "https://github.com/kkmihai/squeezeit"
 
@@ -21,7 +21,7 @@ rayon = "1.10"
 walkdir = "2.5"
 tracing = "0.1"
 wgpu = "29"
-block_compression = { version = "0.9", features = ["wgpu"] }
+block_compression = "0.9"
 zune-png = "0.4"
 
 anyhow = "1.0"

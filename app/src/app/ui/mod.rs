@@ -60,6 +60,10 @@ impl SqueezeItApp {
                 let quit = match event::read()? {
                     Event::Key(key) if key.kind == KeyEventKind::Press => self.handle_key(key),
                     Event::Mouse(mouse) => self.handle_mouse(mouse),
+                    Event::Resize(_, _) => {
+                        terminal.clear()?;
+                        false
+                    }
                     _ => false,
                 };
                 if quit {
@@ -245,33 +249,27 @@ impl SqueezeItApp {
             .style(Style::new().bg(BG))
             .render(area, buf);
 
-        let bounded_width = area.width.min(MAX_WIDTH);
-        let bounded_area = Rect {
-            x: area.x + (area.width - bounded_width) / 2,
-            width: bounded_width,
-            ..area
-        }
-        .inner(Margin {
+        let inner_area = area.inner(Margin {
             horizontal: 1,
             vertical: 0,
         });
 
-        if bounded_area.width >= TWO_COL_MIN_WIDTH {
+        if inner_area.width >= TWO_COL_MIN_WIDTH {
             let cols = Layout::horizontal([
-                Constraint::Min(56),
+                Constraint::Length(79),
                 Constraint::Length(COLUMN_GAP),
-                Constraint::Percentage(38),
+                Constraint::Min(0),
             ])
-            .split(bounded_area);
+            .split(inner_area);
             self.controls_column(cols[0], buf, false);
-
-            let mut activity_area = cols[2];
-            let right_edge = area.right().saturating_sub(1);
-            if right_edge > activity_area.x {
-                activity_area.width = right_edge - activity_area.x;
-            }
-            self.activity_card(activity_area, buf);
+            self.activity_card(cols[2], buf);
         } else {
+            let bounded_width = inner_area.width.min(MAX_WIDTH);
+            let bounded_area = Rect {
+                x: inner_area.x + (inner_area.width - bounded_width) / 2,
+                width: bounded_width,
+                ..inner_area
+            };
             self.controls_column(bounded_area, buf, true);
         }
     }

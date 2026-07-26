@@ -29,10 +29,6 @@ pub enum TextureRole {
     Weapon,
 }
 
-/// Matches the GTA V weapon model naming convention: `w_XX_*`
-/// where `XX` is a two-letter category code (ar, pi, sg, sm, sr, mg,
-/// lr, sb, ex, am, me, ch, nb, …). Catches all Rockstar weapon
-/// categories and custom weapons that follow the same convention.
 fn is_weapon_model_prefix(stem: &str) -> bool {
     let b = stem.as_bytes();
     b.len() >= 5
@@ -255,11 +251,9 @@ mod tests {
 
     #[test]
     fn classifies_weapon_textures() {
-        // Custom weapons with "weapon" in the name
         assert_eq!(role("weapon_pistol_diff.png"), TextureRole::Weapon);
         assert_eq!(role("custom_weapon_skin.dds"), TextureRole::Weapon);
 
-        // Standard GTA V weapon prefixes (w_XX_)
         assert_eq!(role("w_me_pistol1.dds"), TextureRole::Weapon);
         assert_eq!(role("w_ar_assaultrifle.dds"), TextureRole::Weapon);
         assert_eq!(role("w_pi_combatpistol.dds"), TextureRole::Weapon);
@@ -271,7 +265,6 @@ mod tests {
         assert_eq!(role("w_ex_grenade.dds"), TextureRole::Weapon);
         assert_eq!(role("w_sb_switchblade.dds"), TextureRole::Weapon);
 
-        // Must NOT match non-weapon w_ prefixes (too short or no category)
         assert_ne!(role("w_texture.dds"), TextureRole::Weapon);
         assert_ne!(role("wall_brick.dds"), TextureRole::Weapon);
     }

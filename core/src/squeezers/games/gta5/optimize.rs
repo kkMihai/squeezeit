@@ -124,8 +124,6 @@ pub(super) fn optimize_texture(
     let mip_levels = if gen_mips {
         full_chain
     } else {
-        // Always cap at rage_mip_levels — strip useless tail mips
-        // (2×2, 1×1, etc.) that RAGE never samples.
         rec.levels.clamp(1, full_chain)
     };
     let needs_mips = gen_mips && rec.levels <= 1 && tw.min(th) >= 8;
@@ -135,8 +133,6 @@ pub(super) fn optimize_texture(
         return None;
     }
 
-    // Fast path: if only trimming mip levels (no resize, no format change),
-    // just truncate the existing byte slice — skip the expensive decode → encode.
     if (tw, th) == (rec.width, rec.height) && out_dds == dds && !needs_mips && mips_trimmed {
         let trimmed_len = chain_len(rec.width, rec.height, mip_levels, layout);
         if let Some(data) = source.get(..trimmed_len) {

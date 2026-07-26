@@ -3,7 +3,7 @@ name = "cli"
 description = "Batch terminal driver for the SqueezeIt texture optimization engine."
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+license-file.workspace = true
 authors.workspace = true
 repository.workspace = true
 
@@ -13,10 +13,12 @@ path = "src/main.rs"
 
 [dependencies]
 squeezeit.workspace = true
-mimalloc = { version = "0.1", default-features = false }
 anyhow.workspace = true
 clap.workspace = true
 indicatif.workspace = true
 humansize.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
+[target.'cfg(not(windows))'.dependencies]
+mimalloc = { version = "0.1", default-features = false }

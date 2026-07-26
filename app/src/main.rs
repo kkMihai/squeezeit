@@ -1,3 +1,4 @@
+#[cfg(not(windows))]
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
@@ -41,6 +42,24 @@ fn ensure_own_window() {
     }
 }
 
+fn size_window(terminal: &mut ratatui::DefaultTerminal, cols: u16, rows: u16) {
+    use ratatui::crossterm::terminal;
+
+    let sized = terminal::size().is_ok_and(|size| size == (cols, rows));
+    if !sized
+        && ratatui::crossterm::execute!(std::io::stdout(), terminal::SetSize(cols, rows)).is_ok()
+    {
+        for _ in 0..60 {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            if terminal::size().is_ok_and(|size| size == (cols, rows)) {
+                break;
+            }
+        }
+    }
+    let _ = terminal.autoresize();
+    let _ = terminal.clear();
+}
+
 fn main() -> std::io::Result<()> {
     #[cfg(windows)]
     ensure_own_window();
@@ -65,12 +84,15 @@ fn main() -> std::io::Result<()> {
         .ok()
         .map(Arc::new);
 
-    let mut terminal = ratatui::init();
-    let (cols, rows) = app::WINDOW_SIZE;
     let _ = ratatui::crossterm::execute!(
         std::io::stdout(),
         ratatui::crossterm::terminal::SetTitle("SqueezeIt"),
-        ratatui::crossterm::terminal::SetSize(cols, rows),
+    );
+    let mut terminal = ratatui::init();
+    let (cols, rows) = app::WINDOW_SIZE;
+    size_window(&mut terminal, cols, rows);
+    let _ = ratatui::crossterm::execute!(
+        std::io::stdout(),
         ratatui::crossterm::event::EnableMouseCapture,
     );
     let result = SqueezeItApp::load(Arc::clone(&log.queue), gpu).run(&mut terminal);
