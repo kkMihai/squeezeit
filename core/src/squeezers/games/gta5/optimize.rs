@@ -39,6 +39,8 @@ pub(super) fn optimize_texture(
     gpu: Option<&GpuContext>,
     family: AssetFamily,
 ) -> Option<(Vec<u8>, TexPatch)> {
+    let in_place = max_len.is_some();
+
     let PixelLayout::Block { dds, .. } = layout else {
         return None;
     };
@@ -61,6 +63,8 @@ pub(super) fn optimize_texture(
     };
     let gpu = if matches!(role, TextureRole::Livery | TextureRole::Weapon) {
         None
+    } else if family == AssetFamily::PedCloth {
+        None
     } else {
         gpu
     };
@@ -82,6 +86,7 @@ pub(super) fn optimize_texture(
     }
 
     let mut out_dds = if family == AssetFamily::PedCloth
+        && !in_place
         && matches!(dds, ImageFormat::BC2RgbaUnorm | ImageFormat::BC3RgbaUnorm)
     {
         ImageFormat::BC7RgbaUnorm
@@ -119,7 +124,7 @@ pub(super) fn optimize_texture(
         }
     }
 
-    let gen_mips = settings.generate_mipmaps && family.allows_mip_generation();
+    let gen_mips = settings.generate_mipmaps && family.allows_mip_generation() && !in_place;
     let full_chain = rage_mip_levels(tw, th);
     let mip_levels = if gen_mips {
         full_chain
