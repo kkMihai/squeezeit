@@ -61,9 +61,9 @@ pub(super) fn optimize_texture(
         }
         None => TextureRole::Diffuse,
     };
-    let gpu = if matches!(role, TextureRole::Livery | TextureRole::Weapon) {
-        None
-    } else if family == AssetFamily::PedCloth {
+    let gpu = if matches!(role, TextureRole::Livery | TextureRole::Weapon)
+        || family == AssetFamily::PedCloth
+    {
         None
     } else {
         gpu
