@@ -1,0 +1,42 @@
+[workspace]
+resolver = "3"
+members = ["core", "cli", "app"]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+authors = ["kkmihai"]
+repository = "https://github.com/kkmihai/squeezeit"
+
+[workspace.dependencies]
+
+squeezeit = { path = "core" }
+
+thiserror = "2.0"
+image = "0.25"
+image_dds = "0.7"
+flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
+rayon = "1.10"
+walkdir = "2.5"
+tracing = "0.1"
+wgpu = "29"
+block_compression = "0.9"
+zune-png = "0.4"
+
+anyhow = "1.0"
+tracing-subscriber = "0.3"
+clap = { version = "4.5", features = ["derive"] }
+indicatif = { version = "0.18", features = ["rayon"] }
+humansize = "2.1"
+ratatui = "0.30"
+rfd = "0.17"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+
+criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

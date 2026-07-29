@@ -1,0 +1,29 @@
+[package]
+name = "app"
+description = "Terminal UI (ratatui) for the SqueezeIt texture optimization engine."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "squeezeit"
+path = "src/main.rs"
+
+[dependencies]
+squeezeit.workspace = true
+crossbeam-queue = "0.3"
+ratatui.workspace = true
+rfd.workspace = true
+humansize.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = ["Win32_System_Console"] }
+
+[target.'cfg(not(windows))'.dependencies]
+mimalloc = { version = "0.1", default-features = false }

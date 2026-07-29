@@ -1,0 +1,47 @@
+[package]
+name = "squeezeit"
+description = "Headless texture optimization engine: in-memory decode, Lanczos3 resize, mipmaps, and BC1/BC5/BC7 block compression behind a pluggable Squeezer trait."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+image.workspace = true
+image_dds.workspace = true
+flate2.workspace = true
+rayon.workspace = true
+walkdir.workspace = true
+tracing.workspace = true
+serde.workspace = true
+humansize.workspace = true
+wgpu = { workspace = true, optional = true }
+block_compression = { workspace = true, optional = true }
+zune-png.workspace = true
+rustc-hash = "1.1"
+rpf-archive = "0.7.1"
+fast_image_resize = "6"
+sha1 = "0.10"
+
+[features]
+default = ["gpu"]
+gpu = ["dep:wgpu", "dep:block_compression", "block_compression/wgpu"]
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Wdk_Graphics_Direct3D",
+] }
+
+[dev-dependencies]
+criterion = { workspace = true }
+cargo-husky = { version = "1", default-features = false, features = [
+    "user-hooks",
+] }
+
+[[bench]]
+name = "pipeline"
+harness = false
