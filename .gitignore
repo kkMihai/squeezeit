@@ -1,0 +1,9 @@
+/target
+**/*.rs.bk
+.squeezeit-backup/
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
+gtav_*.dat
+*.sqz-tmp
